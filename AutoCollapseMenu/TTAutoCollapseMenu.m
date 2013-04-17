@@ -8,16 +8,19 @@
 
 #import "TTAutoCollapseMenu.h"
 
+#define AUTOEXPANDMENU_MENU_HEIGHT 70
+
 @implementation TTAutoCollapseMenu
 {
     UIView *_firstItem;
     UIView *_selectedItem;
     BOOL _isExpanded;
+    NSMutableDictionary *_item2Index;
 }
 
 - (id)initWithFrame:(CGRect)frame
 {
-    if ((self = [super initWithFrame:CGRectMake(frame.origin.x, frame.origin.y, frame.size.width, 70.0f)]))
+    if ((self = [super initWithFrame:CGRectMake(frame.origin.x, frame.origin.y, frame.size.width, AUTOEXPANDMENU_MENU_HEIGHT)]))
     {
         _isExpanded = NO;
 		[self setup];
@@ -70,12 +73,67 @@
     _actionPickerView.backgroundColor = [UIColor greenColor];
     
 	_borderGradientHidden = NO;
+    
+    [self loadItems];
+}
+
+-(void)loadItems
+{
+    NSInteger numItems = [self.delegate numberOfItemInAutoCollapseMenu];
+    
+    for (UIView *subview in _actionPickerView.subviews) {
+        [subview removeFromSuperview];
+    }
+    
+    if (_items) {
+        [_items removeAllObjects];
+    }
+    else {
+        _items = [[NSMutableArray alloc] init];
+    }
+    _item2Index = [[NSMutableDictionary alloc] initWithCapacity:numItems];
+    
+    for (NSInteger i = 0; i < numItems; i++) {
+        // get item view at index i
+        UIView *itemView = [self.delegate autoCollapseMenu:self viewForItemAtIndex:i];
+        
+        // init frame
+        itemView.frame = CGRectMake(0.0f, 0.0f, AUTOEXPANDMENU_ITEM_WIDTH, AUTOEXPANDMENU_ITEM_HEIGHT);
+        itemView.center = CGPointMake((AUTOEXPANDMENU_ITEM_WIDTH / 2 + i * AUTOEXPANDMENU_ITEM_WIDTH), AUTOEXPANDMENU_ITEM_HEIGHT/2);
+        
+        // add to menu view
+        [_actionPickerView addSubview:itemView];
+        // add gesture to menu item
+        UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleActionPickerViewTap:)];
+        [itemView addGestureRecognizer:tapGesture];
+        
+        // add to item view array
+        [_items addObject:itemView];
+        // add item, index to hash table
+        [_item2Index setValue:@(i) forKey:[self getObjectString:itemView]];
+        
+        // show first item
+        if (i == 0) {
+            _firstItem = _selectedItem = itemView;
+        }
+    }
+    
 }
 
 #pragma mark - Utilities
 -(void)shrinkActionPicker
 {
     
+}
+
+-(void)reloadData
+{
+    [self loadItems];
+}
+
+-(NSString*)getObjectString:(id)object
+{
+    return [NSString stringWithFormat: @"%p", object];
 }
 
 
@@ -92,7 +150,7 @@
 	} else {
         __block __typeof__(self) blockSelf = self;
         CGRect selectedItemRect = _firstItem.frame;
-		[UIView animateWithDuration:0.8
+		[UIView animateWithDuration:0.6
 						 animations:^{
 							 if (blockSelf.titleLabel.isHidden) {
 								 _actionPickerView.frame = CGRectMake(10.0f, 7.0f, blockSelf.frame.size.width - 20.0f, 50.0f);
@@ -186,38 +244,44 @@
 }
 
 - (BOOL)isActionPickerExpanded {
-	return (self.titleLabel.isHidden && _actionPickerView.bounds.size.width != 50.0f);
+	return (self.titleLabel.isHidden && _actionPickerView.bounds.size.width != AUTOEXPANDMENU_ITEM_WIDTH);
 }
 
-- (void)setItems:(NSArray *)newItems {
-    if (newItems.count > 0 && _items != newItems) {
-        for (UIView *subview in _actionPickerView.subviews) {
-            [subview removeFromSuperview];
-        }
-        
-        _items = [NSMutableArray arrayWithArray:newItems];
-        _firstItem = _selectedItem = [_items objectAtIndex:0];
-        for (UIView *item in self.items) {
-			if ([item isKindOfClass:[UIView class]]) {
-				[_actionPickerView addSubview:item];
-                UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleActionPickerViewTap:)];
-                [item addGestureRecognizer:tapGesture];
-			}
-        }
-    }
-}
+//- (void)setItems:(NSArray *)newItems {
+//    if (newItems.count > 0 && _items != newItems) {
+//        for (UIView *subview in _actionPickerView.subviews) {
+//            [subview removeFromSuperview];
+//        }
+//        
+//        _items = [NSMutableArray arrayWithArray:newItems];
+//        _firstItem = _selectedItem = [_items objectAtIndex:0];
+//        for (UIView *item in _items) {
+//			if ([item isKindOfClass:[UIView class]]) {
+//				[_actionPickerView addSubview:item];
+//                UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleActionPickerViewTap:)];
+//                [item addGestureRecognizer:tapGesture];
+//			}
+//        }
+//    }
+//}
 
 #pragma mark -
 #pragma mark UITapGestureRecognizer & UIGestureRecognizerDelegate
 
 - (void)handleActionPickerViewTap:(UIGestureRecognizer *)gestureRecognizer {
-    NSLog(@"handleActionPickerViewTap-0 item tag = %d", gestureRecognizer.view.tag);
+//    NSLog(@"handleActionPickerViewTap-0 item tag = %d", gestureRecognizer.view.tag);
     self.titleLabel.hidden = !self.titleLabel.isHidden;
-    if(_isExpanded && [self.items containsObject:gestureRecognizer.view])
+    if(_isExpanded && [_items containsObject:gestureRecognizer.view])
     {
         _selectedItem = gestureRecognizer.view;
         [_actionPickerView bringSubviewToFront:_selectedItem];
+        
+        // did select menu item
+        if ([self.delegate respondsToSelector:@selector(autoCollapseMenu:didSelectItemAtIndex:)]) {
+            [self.delegate autoCollapseMenu:self didSelectItemAtIndex:[[_item2Index valueForKey:[self getObjectString:_selectedItem]] integerValue]];
+        }
     }
+    
     [self setNeedsLayout];
 }
 
