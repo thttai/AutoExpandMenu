@@ -8,7 +8,6 @@
 
 #import "TTAutoCollapseMenu.h"
 
-#define AUTOEXPANDMENU_MENU_HEIGHT 70
 
 @implementation TTAutoCollapseMenu
 {
@@ -20,7 +19,18 @@
 
 - (id)initWithFrame:(CGRect)frame
 {
-    if ((self = [super initWithFrame:CGRectMake(frame.origin.x, frame.origin.y, frame.size.width, AUTOEXPANDMENU_MENU_HEIGHT)]))
+    if ((self = [super initWithFrame:CGRectMake(frame.origin.x, frame.origin.y, frame.size.width, AUTOEXPANDMENU_MENU_HEIGHT + 6.0f)]))
+    {
+        _isExpanded = NO;
+		[self setup];
+	}
+	return self;
+}
+
+-(id)initWithFrame:(CGRect)frame atPosition:(enumTTAutoCollapseMenuPosition)position
+{
+    CGFloat posY = position == enumTTAutoCollapseMenuPosition_Top ? 0 : (frame.size.height - AUTOEXPANDMENU_MENU_HEIGHT);
+    if ((self = [super initWithFrame:CGRectMake(frame.origin.x, posY, frame.size.width, AUTOEXPANDMENU_MENU_HEIGHT + 6.0f)]))
     {
         _isExpanded = NO;
 		[self setup];
@@ -53,7 +63,7 @@
 	[self addSubview:_titleLabel];
 	
 	_actionPickerView = [[UIView alloc] initWithFrame:CGRectZero];
-	_actionPickerView.layer.cornerRadius = 25.0f;
+	_actionPickerView.layer.cornerRadius = AUTOEXPANDMENU_ITEM_RADIUS;
 	_actionPickerView.layer.borderWidth = 1.0f;
 	_actionPickerView.layer.borderColor = [UIColor darkGrayColor].CGColor;
 	_actionPickerView.clipsToBounds = YES;
@@ -99,7 +109,7 @@
         
         // init frame
         itemView.frame = CGRectMake(0.0f, 0.0f, AUTOEXPANDMENU_ITEM_WIDTH, AUTOEXPANDMENU_ITEM_HEIGHT);
-        itemView.center = CGPointMake((AUTOEXPANDMENU_ITEM_WIDTH / 2 + i * AUTOEXPANDMENU_ITEM_WIDTH), AUTOEXPANDMENU_ITEM_HEIGHT/2);
+        itemView.center = CGPointMake((AUTOEXPANDMENU_ITEM_WIDTH / 2 + i * AUTOEXPANDMENU_ITEM_WIDTH), AUTOEXPANDMENU_ITEM_RADIUS);
         
         // add to menu view
         [_actionPickerView addSubview:itemView];
@@ -120,6 +130,12 @@
     
 }
 
+-(void)addSubview:(UIView *)view
+{
+    [super addSubview:view];
+    [self bringSubviewToFront:_actionPickerView];
+}
+
 #pragma mark - Utilities
 -(void)shrinkActionPicker
 {
@@ -136,24 +152,30 @@
     return [NSString stringWithFormat: @"%p", object];
 }
 
-
 #pragma mark Layout & Redraw
 
 - (void)layoutSubviews {
+    self.titleLabel.frame = CGRectMake(12.0f, (AUTOEXPANDMENU_MENU_HEIGHT - 45.0f )/2, self.frame.size.width - AUTOEXPANDMENU_MENU_HEIGHT, 45.0f);
+    _actionPickerGradientLayer.bounds = CGRectMake(0.0f, 0.0f, self.frame.size.width - 2*MENU_PADDING, AUTOEXPANDMENU_ITEM_HEIGHT);
     
-    self.titleLabel.frame = CGRectMake(12.0f, 10.0f, self.frame.size.width - 70.0f, 45.0f);
-    _actionPickerGradientLayer.bounds = CGRectMake(0.0f, 0.0f, self.frame.size.width - 20.0f, 50.0f);
+    NSLog(@"AUTOEXPANDMENU_MENU_HEIGHT = %f", AUTOEXPANDMENU_MENU_HEIGHT);
+    NSLog(@"MENU_PADDING = %f", MENU_PADDING);
+    NSLog(@"AUTOEXPANDMENU_ITEM_WIDTH = %f", AUTOEXPANDMENU_ITEM_WIDTH);
+    NSLog(@"AUTOEXPANDMENU_ITEM_HEIGHT = %f", AUTOEXPANDMENU_ITEM_HEIGHT);
+    NSLog(@"AUTOEXPANDMENU_ITEM_RADIUS = %f", AUTOEXPANDMENU_ITEM_RADIUS);
     
+    NSLog(@"self = %@", self);
 	if (CGRectIsEmpty(_actionPickerView.frame)) {
         _isExpanded = NO;
-		_actionPickerView.frame = CGRectMake(self.frame.size.width - 60.0f, 7.0f, 50.0f, 50.0f);
+		_actionPickerView.frame = CGRectMake(self.frame.size.width - (AUTOEXPANDMENU_ITEM_WIDTH + MENU_PADDING), (AUTOEXPANDMENU_MENU_HEIGHT - AUTOEXPANDMENU_ITEM_HEIGHT) / 2, AUTOEXPANDMENU_ITEM_WIDTH, AUTOEXPANDMENU_ITEM_HEIGHT);
+        NSLog(@"menu = %@", _actionPickerView);
 	} else {
         __block __typeof__(self) blockSelf = self;
         CGRect selectedItemRect = _firstItem.frame;
 		[UIView animateWithDuration:0.6
 						 animations:^{
 							 if (blockSelf.titleLabel.isHidden) {
-								 _actionPickerView.frame = CGRectMake(10.0f, 7.0f, blockSelf.frame.size.width - 20.0f, 50.0f);
+								 _actionPickerView.frame = CGRectMake(MENU_PADDING, (AUTOEXPANDMENU_MENU_HEIGHT - AUTOEXPANDMENU_ITEM_HEIGHT) / 2 , blockSelf.frame.size.width - 2*MENU_PADDING, AUTOEXPANDMENU_ITEM_WIDTH);
                                  
 							 } else {
                                  if(_firstItem != _selectedItem)
@@ -161,7 +183,7 @@
                                      _firstItem.frame = _selectedItem.frame;
                                      _selectedItem.frame = selectedItemRect;
                                  }
-								 _actionPickerView.frame = CGRectMake(blockSelf.frame.size.width - 60.0f, 7.0f, 50.0f, 50.0f);
+								 _actionPickerView.frame = CGRectMake(blockSelf.frame.size.width - (AUTOEXPANDMENU_ITEM_WIDTH + MENU_PADDING), (AUTOEXPANDMENU_MENU_HEIGHT - AUTOEXPANDMENU_ITEM_HEIGHT) / 2 , AUTOEXPANDMENU_ITEM_WIDTH, AUTOEXPANDMENU_ITEM_WIDTH);
 							 }
 						 } completion:^(BOOL finished) {
                              if (blockSelf.titleLabel.isHidden) {
@@ -181,21 +203,21 @@
 		200.0f / 255.0f, 207.0f / 255.0f, 212.0f / 255.0f, 1.0f,
         169.0f / 255.0f, 178.0f / 255.0f, 185.0f / 255.0f, 1.0f
 	};
-	[self drawLinearGradientInRect:CGRectMake(0.0f, 0.0f, rect.size.width, 64.0f) colors:colors];
+	[self drawLinearGradientInRect:CGRectMake(0.0f, 0.0f, rect.size.width, AUTOEXPANDMENU_MENU_HEIGHT) colors:colors];
     
     if (!self.borderGradientHidden) {
         CGFloat colors2[] = {
             152.0f / 255.0f, 156.0f / 255.0f, 161.0f / 255.0f, 0.5f,
             152.0f / 255.0f, 156.0f / 255.0f, 161.0f / 255.0f, 0.1f
         };
-        [self drawLinearGradientInRect:CGRectMake(0.0f, 65.0f, rect.size.width, 5.0f) colors:colors2];
+        [self drawLinearGradientInRect:CGRectMake(0.0f, AUTOEXPANDMENU_MENU_HEIGHT + 1.0f, rect.size.width, 5.0f) colors:colors2];
     }
     
     CGFloat line1[]={240.0f / 255.0f, 230.0f / 255.0f, 230.0f / 255.0f, 1.0f};
     [self drawLineInRect:CGRectMake(0.0f, 0.0f, rect.size.width, 0.0f) colors:line1];
     
     CGFloat line2[]={94.0f / 255.0f,  103.0f / 255.0f, 109.0f / 255.0f, 1.0f};
-    [self drawLineInRect:CGRectMake(0.0f, 64.5f, rect.size.width, 0.0f) colors:line2];
+    [self drawLineInRect:CGRectMake(0.0f, AUTOEXPANDMENU_MENU_HEIGHT + 0.5f, rect.size.width, 0.0f) colors:line2];
 }
 
 #pragma mark Drawing private methods

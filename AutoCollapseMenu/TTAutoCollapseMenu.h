@@ -9,8 +9,18 @@
 #import <UIKit/UIKit.h>
 #import <QuartzCore/QuartzCore.h>
 
-#define AUTOEXPANDMENU_ITEM_HEIGHT 50
-#define AUTOEXPANDMENU_ITEM_WIDTH 50
+#define AUTOEXPANDMENU_ITEM_WIDTH 40.0f
+#define AUTOEXPANDMENU_ITEM_HEIGHT AUTOEXPANDMENU_ITEM_WIDTH
+#define AUTOEXPANDMENU_ITEM_RADIUS (AUTOEXPANDMENU_ITEM_WIDTH/2)
+#define AUTOEXPANDMENU_MENU_HEIGHT 50.0f
+#define MENU_PADDING 10.0f
+
+typedef enum
+{
+    enumTTAutoCollapseMenuPosition_Top = 0,
+    enumTTAutoCollapseMenuPosition_Bottom,
+    enumTTAutoCollapseMenuPosition_Num
+}enumTTAutoCollapseMenuPosition;
 
 @class TTAutoCollapseMenu;
 @protocol TTAutoCollapseMenuDelegate <NSObject>
@@ -35,4 +45,6 @@
 @property (weak, nonatomic) id<TTAutoCollapseMenuDelegate> delegate;
 
 -(void)reloadData;
+
+-(id)initWithFrame:(CGRect)frame atPosition:(enumTTAutoCollapseMenuPosition)position;
 @end
